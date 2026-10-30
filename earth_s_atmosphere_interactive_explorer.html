@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earth's Atmosphere Interactive Explorer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Stable, non-drifting layer styles with crisp click targets */
+    .interactive-layer {
+      cursor: pointer;
+      transition: fill-opacity 0.15s ease, opacity 0.15s ease, stroke-width 0.15s ease, filter 0.15s ease;
+    }
+    .interactive-layer:hover {
+      filter: brightness(1.22);
+    }
+    .interactive-layer.is-active {
+      filter: brightness(1.35) drop-shadow(0 0 12px rgba(56, 189, 248, 0.45));
+    }
+
+    /* Fixed, crisp button hover without scaling jitter */
+    .hotspot-btn {
+      cursor: pointer;
+      transition: filter 0.15s ease, opacity 0.15s ease;
+    }
+    .hotspot-btn:hover {
+      filter: brightness(1.25);
+    }
+
+    /* Slide panel smooth transition */
+    .drawer-transition {
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-white overflow-x-hidden">
+
+  <!-- Header & Toolbar -->
+  <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30 px-4 py-2.5 sm:px-6">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              Earth's Atmosphere Diagram
+              <span class="text-[10px] font-mono-code font-semibold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800">8th Grade Science</span>
+            </h1>
+          </div>
+        </div>
+
+        <button onclick="toggleInfoModal()" class="md:hidden p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white" title="Quick Info">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+      </div>
+
+      <!-- Quick Layer Selector Buttons -->
+      <nav id="nav-buttons" class="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none text-[11px] font-mono-code">
+        <button id="btn-earth" onclick="openLayer('earth')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-transparent transition-colors whitespace-nowrap">Earth Surface</button>
+        <button id="btn-troposphere" onclick="openLayer('troposphere')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-transparent transition-colors whitespace-nowrap">Troposphere</button>
+        <button id="btn-stratosphere" onclick="openLayer('stratosphere')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-blue-300 border border-transparent transition-colors whitespace-nowrap">Stratosphere</button>
+        <button id="btn-ozone" onclick="openLayer('ozone')" class="px-2.5 py-1.5 rounded bg-amber-950/70 hover:bg-amber-900 border border-amber-600/50 text-amber-300 transition-colors whitespace-nowrap">Ozone Layer</button>
+        <button id="btn-mesosphere" onclick="openLayer('mesosphere')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-transparent transition-colors whitespace-nowrap">Mesosphere</button>
+        <button id="btn-karman" onclick="openLayer('karman')" class="px-2.5 py-1.5 rounded bg-red-950/70 hover:bg-red-900 border border-red-600/50 text-red-300 transition-colors whitespace-nowrap">Kármán Line</button>
+        <button id="btn-thermosphere" onclick="openLayer('thermosphere')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-purple-300 border border-transparent transition-colors whitespace-nowrap">Thermosphere</button>
+        <button id="btn-exobase" onclick="openLayer('exobase')" class="px-2.5 py-1.5 rounded bg-purple-950/70 hover:bg-purple-900 border border-purple-600/50 text-purple-300 transition-colors whitespace-nowrap">Exobase</button>
+        <button id="btn-exosphere" onclick="openLayer('exosphere')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-transparent transition-colors whitespace-nowrap">Exosphere</button>
+        <button id="btn-space" onclick="openLayer('space')" class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-cyan-200 border border-cyan-700/60 transition-colors whitespace-nowrap">Space (Vacuum)</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Interactive Graphic Canvas Area -->
+  <main class="flex-1 relative w-full flex items-center justify-center p-2 sm:p-4 md:p-6">
+    <div class="relative w-full max-w-6xl aspect-[16/10] sm:aspect-[16/9.5] rounded-2xl overflow-hidden border border-slate-800 bg-[#1e2456] shadow-2xl">
+      
+      <!-- SVG Atmospheric Layers Representation -->
+      <svg id="atmosphere-svg" viewBox="0 0 1600 950" class="w-full h-full select-none" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <!-- Stable Atmospheric Gradients -->
+          <linearGradient id="grad-space" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#14183d" />
+            <stop offset="100%" stop-color="#1e255e" />
+          </linearGradient>
+
+          <linearGradient id="grad-exosphere" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#212a6d" />
+            <stop offset="100%" stop-color="#28357f" />
+          </linearGradient>
+
+          <linearGradient id="grad-thermosphere" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#34479e" />
+            <stop offset="100%" stop-color="#3f55b5" />
+          </linearGradient>
+
+          <linearGradient id="grad-mesosphere" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#4a69c7" />
+            <stop offset="100%" stop-color="#557cd9" />
+          </linearGradient>
+
+          <linearGradient id="grad-stratosphere" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#6797ea" />
+            <stop offset="100%" stop-color="#7ab1f3" />
+          </linearGradient>
+
+          <linearGradient id="grad-troposphere" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#8ec8f8" />
+            <stop offset="100%" stop-color="#b8e3ff" />
+          </linearGradient>
+
+          <!-- Earth Gradient -->
+          <linearGradient id="grad-ocean" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#0284c7" />
+            <stop offset="100%" stop-color="#0369a1" />
+          </linearGradient>
+
+          <!-- Subtle Glow Filter for Ozone -->
+          <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- BACKGROUND: Outer Space & Static Sky -->
+        <rect id="layer-svg-space" class="interactive-layer" onclick="openLayer('space')" width="1600" height="950" fill="url(#grad-space)" />
+
+        <!-- Static Background Stars & Distant Objects (No animation) -->
+        <g opacity="0.6" pointer-events="none">
+          <circle cx="280" cy="80" r="2" fill="#fff" />
+          <circle cx="1470" cy="70" r="2.5" fill="#fff" />
+          <circle cx="1540" cy="200" r="1.5" fill="#fff" />
+          <circle cx="160" cy="140" r="1.5" fill="#fff" />
+          <circle cx="1320" cy="90" r="8" fill="none" stroke="#60a5fa" stroke-width="1.5" />
+          <line x1="1308" y1="90" x2="1332" y2="90" stroke="#60a5fa" stroke-width="1.2" />
+          <circle cx="1520" cy="130" r="11" fill="none" stroke="#cbd5e1" stroke-width="1.5" />
+          <ellipse cx="1520" cy="130" rx="20" ry="5" fill="none" stroke="#94a3b8" stroke-width="1.2" transform="rotate(-25 1520 130)" />
+        </g>
+
+        <!-- 1. EXOSPHERE CONCENTRIC LAYER (Wide clickable band) -->
+        <path id="layer-svg-exosphere" class="interactive-layer" onclick="openLayer('exosphere')"
+              d="M -200 950 A 1850 1850 0 0 1 1800 950 L 1750 950 A 1650 1650 0 0 0 -150 950 Z"
+              fill="url(#grad-exosphere)" opacity="0.95" />
+
+        <!-- 2. BOUNDARY: EXOBASE (Wide invisible hit zone + clean visible dashed line) -->
+        <!-- Wide invisible stroke for easy clicking -->
+        <path onclick="openLayer('exobase')" class="interactive-layer"
+              d="M -150 950 A 1550 1550 0 0 1 1750 950" fill="none" stroke="transparent" stroke-width="38" />
+        <!-- Visible static boundary -->
+        <path id="line-svg-exobase" pointer-events="none"
+              d="M -150 950 A 1550 1550 0 0 1 1750 950" fill="none" stroke="#f1f5f9" stroke-dasharray="10 8" stroke-width="3" opacity="0.85" />
+
+        <!-- 3. THERMOSPHERE CONCENTRIC LAYER (Wide clickable band) -->
+        <path id="layer-svg-thermosphere" class="interactive-layer" onclick="openLayer('thermosphere')"
+              d="M -150 950 A 1550 1550 0 0 1 1750 950 L 1650 950 A 1320 1320 0 0 0 -50 950 Z"
+              fill="url(#grad-thermosphere)" />
+
+        <!-- 4. BOUNDARY: KÁRMÁN LINE (Wide invisible hit zone + crisp red boundary) -->
+        <!-- Wide invisible click strip -->
+        <path onclick="openLayer('karman')" class="interactive-layer"
+              d="M -70 950 A 1300 1300 0 0 1 1670 950" fill="none" stroke="transparent" stroke-width="36" />
+        <!-- Visible static boundary -->
+        <path id="line-svg-karman" pointer-events="none"
+              d="M -70 950 A 1300 1300 0 0 1 1670 950" fill="none" stroke="#f87171" stroke-dasharray="6 6" stroke-width="3.5" opacity="0.95" />
+
+        <!-- 5. MESOSPHERE CONCENTRIC LAYER (Wide clickable band) -->
+        <path id="layer-svg-mesosphere" class="interactive-layer" onclick="openLayer('mesosphere')"
+              d="M -50 950 A 1320 1320 0 0 1 1650 950 L 1570 950 A 1160 1160 0 0 0 30 950 Z"
+              fill="url(#grad-mesosphere)" />
+
+        <!-- 6. STRATOSPHERE CONCENTRIC LAYER (Wide clickable band) -->
+        <path id="layer-svg-stratosphere" class="interactive-layer" onclick="openLayer('stratosphere')"
+              d="M 30 950 A 1160 1160 0 0 1 1570 950 L 1480 950 A 970 970 0 0 0 120 950 Z"
+              fill="url(#grad-stratosphere)" />
+
+        <!-- 7. OZONE LAYER (Clickable ribbon inside Stratosphere) -->
+        <path id="layer-svg-ozone" class="interactive-layer" onclick="openLayer('ozone')"
+              d="M 65 950 A 1085 1085 0 0 1 1535 950 L 1515 950 A 1045 1045 0 0 0 85 950 Z"
+              fill="#fbbf24" opacity="0.38" filter="url(#glow-amber)" stroke="#fef08a" stroke-width="1.5" />
+
+        <!-- 8. TROPOSPHERE CONCENTRIC LAYER (Wide clickable band) -->
+        <path id="layer-svg-troposphere" class="interactive-layer" onclick="openLayer('troposphere')"
+              d="M 120 950 A 970 970 0 0 1 1480 950 L 1410 950 A 830 830 0 0 0 190 950 Z"
+              fill="url(#grad-troposphere)" />
+
+        <!-- 9. EARTH GLOBE & CRUST (R=830, Center: 800, 1580) -->
+        <g id="layer-svg-earth" class="interactive-layer" onclick="openLayer('earth')">
+          <!-- Ocean Sphere -->
+          <circle cx="800" cy="1580" r="830" fill="url(#grad-ocean)" />
+          
+          <!-- Continent Landmasses / Mountains / Coastline -->
+          <path d="M 450 780 Q 560 740 680 770 Q 770 790 870 770 Q 980 750 1120 790 L 1150 850 Q 800 810 450 850 Z" fill="#22c55e" opacity="0.9" />
+          <path d="M 520 775 L 560 725 L 610 775 L 650 735 L 700 780 Z" fill="#e2e8f0" />
+          <path d="M 890 775 L 940 710 L 990 770 L 1020 730 L 1060 785 Z" fill="#e2e8f0" />
+          <path d="M 450 780 Q 560 740 680 770 Q 770 790 870 770 Q 980 750 1120 790" fill="none" stroke="#eab308" stroke-width="8" stroke-linejoin="round" />
+        </g>
+
+        <!-- STATIC SCIENTIFIC ILLUSTRATIONS (Completely static; pointer-events none so they never block clicks) -->
+        <g id="illustrations" pointer-events="none">
+          <!-- Troposphere: Clouds -->
+          <g fill="#ffffff" opacity="0.9">
+            <ellipse cx="380" cy="790" rx="35" ry="16" />
+            <ellipse cx="400" cy="780" rx="22" ry="18" />
+            <ellipse cx="580" cy="760" rx="42" ry="18" />
+            <ellipse cx="610" cy="750" rx="26" ry="20" />
+            <ellipse cx="1160" cy="815" rx="25" ry="12" />
+            <ellipse cx="1180" cy="808" rx="16" ry="14" />
+          </g>
+
+          <!-- Troposphere: Weather Balloon (left) -->
+          <g transform="translate(600, 710) scale(0.75)">
+            <ellipse cx="0" cy="0" rx="20" ry="26" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+            <path d="M-15 15 L-5 32 L5 32 L15 15 Z" fill="#f87171" />
+            <rect x="-6" y="34" width="12" height="10" rx="2" fill="#d97706" />
+          </g>
+
+          <!-- Troposphere: Commercial Airliner (right) -->
+          <g transform="translate(1040, 805) rotate(-15) scale(0.65)" fill="#ffffff">
+            <path d="M-30 0 L20 0 Q35 0 40 5 Q35 10 20 10 L-30 10 L-45 22 L-55 22 L-42 10 L-65 10 L-72 18 L-80 18 L-75 5 L-80 -8 L-72 -8 L-65 0 Z" />
+            <polygon points="-10,0 5,-28 18,-28 0,0" fill="#ffffff" />
+          </g>
+
+          <!-- Stratosphere: Supersonic Jet (left) -->
+          <g transform="translate(580, 640) rotate(-8) scale(0.65)" fill="#ffffff">
+            <polygon points="50,0 0,-15 10,-3 -40,-3 -20,-22 -10,-22 -30,0 -10,22 -20,22 -40,3 10,3 0,15" />
+          </g>
+
+          <!-- Stratosphere: High Altitude Weather Balloon (right) -->
+          <g transform="translate(1140, 680) scale(0.7)">
+            <path d="M0 -35 C25 -35 25 10 0 25 C-25 10 -25 -35 0 -35 Z" fill="#ffffff" opacity="0.95" />
+            <line x1="0" y1="25" x2="0" y2="45" stroke="#ffffff" stroke-width="1.5" />
+            <rect x="-6" y="45" width="12" height="10" fill="#f59e0b" />
+          </g>
+
+          <!-- Mesosphere: Meteors ('Shooting Stars') -->
+          <g transform="translate(380, 560)">
+            <line x1="-30" y1="-50" x2="30" y2="50" stroke="#b8e3ff" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+            <circle cx="30" cy="50" r="5" fill="#fef08a" />
+            <line x1="30" y1="-30" x2="70" y2="35" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.95" />
+            <circle cx="70" cy="35" r="4" fill="#f97316" />
+          </g>
+
+          <!-- Thermosphere: Auroral Ribbons (Northern Lights) -->
+          <g transform="translate(420, 360)" opacity="0.85">
+            <path d="M 0 60 Q 20 -20 40 40 T 80 20 T 120 50" fill="none" stroke="#4ade80" stroke-width="2.5" />
+            <path d="M 10 70 Q 30 -10 50 50 T 90 30 T 130 60" fill="none" stroke="#a855f7" stroke-width="2" />
+            <path d="M -10 50 Q 15 -30 35 30 T 75 10 T 115 40" fill="none" stroke="#22d3ee" stroke-width="2" />
+          </g>
+
+          <!-- Thermosphere: Satellite -->
+          <g transform="translate(610, 370) scale(0.85)" fill="#ffffff">
+            <rect x="-8" y="-22" width="16" height="44" rx="2" fill="#e2e8f0" />
+            <rect x="-50" y="-12" width="38" height="24" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" />
+            <rect x="12" y="-12" width="38" height="24" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" />
+          </g>
+
+          <!-- Thermosphere: Hubble Space Telescope (right) -->
+          <g transform="translate(1180, 420) rotate(-25) scale(0.7)" fill="#ffffff">
+            <rect x="-12" y="-30" width="24" height="60" rx="3" fill="#cbd5e1" />
+            <rect x="-55" y="-16" width="38" height="32" fill="#0284c7" stroke="#38bdf8" stroke-width="2" />
+            <rect x="17" y="-16" width="38" height="32" fill="#0284c7" stroke="#38bdf8" stroke-width="2" />
+          </g>
+        </g>
+
+        <!-- TYPOGRAPHIC LABELS IN THE DIAGRAM (pointer-events none so they never block clicks) -->
+        <g id="layer-labels" pointer-events="none" font-weight="700" text-anchor="middle">
+          
+          <!-- EXOSPHERE LABEL -->
+          <text x="800" y="110" fill="#ffffff" font-size="28" letter-spacing="3" opacity="0.95">EXOSPHERE</text>
+          <text x="800" y="135" fill="#cbd5e1" font-size="14" font-family="'JetBrains Mono', monospace">1,000 - 150,000 km</text>
+
+          <!-- EXOBASE LABEL & LEADER LINE -->
+          <g transform="translate(970, 160)">
+            <text x="0" y="0" fill="#f8fafc" font-size="17" letter-spacing="1">EXOBASE</text>
+            <text x="0" y="18" fill="#cbd5e1" font-size="12" font-family="'JetBrains Mono', monospace">~1,000 km (Base of Exosphere)</text>
+            <line x1="-50" y1="28" x2="-80" y2="48" stroke="#e2e8f0" stroke-width="1.5" />
+            <circle cx="-80" cy="48" r="3.5" fill="#ffffff" />
+          </g>
+
+          <!-- THERMOSPHERE LABEL -->
+          <text x="800" y="315" fill="#ffffff" font-size="28" letter-spacing="3">THERMOSPHERE</text>
+          <text x="800" y="340" fill="#bfdbfe" font-size="14" font-family="'JetBrains Mono', monospace">85 - 1,000 km</text>
+
+          <!-- KÁRMÁN LINE LABEL & LEADER LINE -->
+          <g transform="translate(1000, 420)">
+            <text x="0" y="0" fill="#fca5a5" font-size="17" letter-spacing="1">KÁRMÁN LINE</text>
+            <text x="0" y="18" fill="#fecaca" font-size="12" font-family="'JetBrains Mono', monospace">100 km (Boundary of Space)</text>
+            <line x1="-50" y1="22" x2="-100" y2="52" stroke="#f87171" stroke-width="1.8" />
+            <circle cx="-100" cy="52" r="4" fill="#ef4444" />
+          </g>
+
+          <!-- MESOSPHERE LABEL -->
+          <text x="800" y="535" fill="#ffffff" font-size="26" letter-spacing="3">MESOSPHERE</text>
+          <text x="800" y="558" fill="#e0e7ff" font-size="14" font-family="'JetBrains Mono', monospace">50 - 85 km</text>
+
+          <!-- STRATOSPHERE LABEL -->
+          <text x="800" y="630" fill="#ffffff" font-size="26" letter-spacing="3">STRATOSPHERE</text>
+          <text x="800" y="652" fill="#eff6ff" font-size="14" font-family="'JetBrains Mono', monospace">10 - 50 km</text>
+
+          <!-- OZONE LAYER LABEL & LEADER LINE -->
+          <g transform="translate(980, 665)">
+            <text x="0" y="0" fill="#fde68a" font-size="16" letter-spacing="1">OZONE LAYER</text>
+            <text x="0" y="17" fill="#fef08a" font-size="12" font-family="'JetBrains Mono', monospace">Most of Earth's Ozone</text>
+            <line x1="-50" y1="20" x2="-80" y2="38" stroke="#fde047" stroke-width="1.8" />
+            <circle cx="-80" cy="38" r="4" fill="#fde047" />
+          </g>
+
+          <!-- TROPOSPHERE LABEL -->
+          <text x="800" y="745" fill="#0f172a" font-size="26" letter-spacing="3">TROPOSPHERE</text>
+          <text x="800" y="768" fill="#1e293b" font-size="14" font-family="'JetBrains Mono', monospace">0 - 10 km</text>
+        </g>
+
+        <!-- ============================================== -->
+        <!-- STABLE CLICKABLE '+' HOTSPOTS (NO PULSE, CRISP TARGETS) -->
+        <!-- ============================================== -->
+        <g id="hotspots">
+
+          <!-- HOTSPOT 1: EXOSPHERE (Top Left, cx=90, cy=95) -->
+          <g id="hotspot-exosphere" class="hotspot-btn" onclick="openLayer('exosphere')" transform="translate(90, 95)">
+            <circle r="36" fill="#0f172a" stroke="#ffffff" stroke-width="3" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#0f172a">+</text>
+          </g>
+
+          <!-- HOTSPOT 2: EXOBASE (Left boundary curve, cx=210, cy=245) -->
+          <g id="hotspot-exobase" class="hotspot-btn" onclick="openLayer('exobase')" transform="translate(210, 245)">
+            <circle r="36" fill="#3b0764" stroke="#c084fc" stroke-width="3" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#581c87">+</text>
+          </g>
+
+          <!-- HOTSPOT 3: THERMOSPHERE (Left side, cx=245, cy=465) -->
+          <g id="hotspot-thermosphere" class="hotspot-btn" onclick="openLayer('thermosphere')" transform="translate(245, 465)">
+            <circle r="36" fill="#1e3a8a" stroke="#93c5fd" stroke-width="3" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#1e3a8a">+</text>
+          </g>
+
+          <!-- HOTSPOT 4: KÁRMÁN LINE (Center arc, cx=810, cy=455) -->
+          <g id="hotspot-karman" class="hotspot-btn" onclick="openLayer('karman')" transform="translate(810, 455)">
+            <circle r="36" fill="#450a0a" stroke="#f87171" stroke-width="3.5" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#b91c1c">+</text>
+          </g>
+
+          <!-- HOTSPOT 5: MESOSPHERE (Left-center, cx=480, cy=595) -->
+          <g id="hotspot-mesosphere" class="hotspot-btn" onclick="openLayer('mesosphere')" transform="translate(480, 595)">
+            <circle r="36" fill="#312e81" stroke="#a5b4fc" stroke-width="3" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#3730a3">+</text>
+          </g>
+
+          <!-- HOTSPOT 6: STRATOSPHERE (Left side, cx=430, cy=725) -->
+          <g id="hotspot-stratosphere" class="hotspot-btn" onclick="openLayer('stratosphere')" transform="translate(430, 725)">
+            <circle r="36" fill="#0369a1" stroke="#7dd3fc" stroke-width="3" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#0284c7">+</text>
+          </g>
+
+          <!-- HOTSPOT 7: OZONE LAYER (Center-right in Stratosphere, cx=900, cy=680) -->
+          <g id="hotspot-ozone" class="hotspot-btn" onclick="openLayer('ozone')" transform="translate(900, 680)">
+            <circle r="36" fill="#78350f" stroke="#fde047" stroke-width="3" />
+            <circle r="22" fill="#fef08a" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#713f12">+</text>
+          </g>
+
+          <!-- HOTSPOT 8: TROPOSPHERE (Center, cx=670, cy=775) -->
+          <g id="hotspot-troposphere" class="hotspot-btn" onclick="openLayer('troposphere')" transform="translate(670, 775)">
+            <circle r="36" fill="#0c4a6e" stroke="#38bdf8" stroke-width="3" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#0369a1">+</text>
+          </g>
+
+          <!-- HOTSPOT 9: EARTH SURFACE (Bottom Center, cx=800, cy=940) -->
+          <g id="hotspot-earth" class="hotspot-btn" onclick="openLayer('earth')" transform="translate(800, 940)">
+            <circle r="36" fill="#14532d" stroke="#86efac" stroke-width="3" />
+            <circle r="22" fill="#ffffff" />
+            <text x="0" y="7" text-anchor="middle" font-size="24" font-weight="900" fill="#166534">+</text>
+          </g>
+
+        </g>
+      </svg>
+
+      <!-- Bottom Status Bar -->
+      <div class="absolute bottom-2 left-4 right-4 flex items-center justify-between text-xs text-slate-300 font-mono-code bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-700/60 pointer-events-none">
+        <span class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+          Click any layer band or <strong class="text-white">+</strong> icon to open details
+        </span>
+        <span class="hidden sm:inline text-slate-400">Stable Mode: Clickable anywhere in the layer</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- SLIDE-OVER INFORMATION MODAL / DRAWER -->
+  <!-- ======================================================== -->
+  <div id="backdrop" onclick="closeDrawer()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 hidden transition-opacity opacity-0"></div>
+
+  <aside id="info-drawer" class="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-slate-900 border-l border-slate-800 z-50 p-6 flex flex-col justify-between shadow-2xl drawer-transition transform translate-x-full overflow-y-auto">
+    
+    <div>
+      <!-- Drawer Top Bar -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <span id="drawer-tag" class="text-xs font-mono-code px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-sky-950 text-sky-300 border border-sky-800">
+          ATMOSPHERIC LAYER
+        </span>
+        <button onclick="closeDrawer()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Title & Altitude -->
+      <div class="mt-5">
+        <h2 id="drawer-title" class="text-3xl font-extrabold text-white tracking-tight">Troposphere</h2>
+        <p id="drawer-altitude" class="text-sm font-mono-code text-cyan-400 font-semibold mt-1">Altitude: 0 to 12 km (0 to 7.5 miles)</p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-2 gap-3 my-5">
+        <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Temperature Trend</span>
+          <span id="drawer-temp" class="text-sm font-bold text-sky-300 mt-1 block">Drops with height</span>
+        </div>
+        <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Air Density / Pressure</span>
+          <span id="drawer-density" class="text-sm font-bold text-amber-300 mt-1 block">75-80% total air mass</span>
+        </div>
+      </div>
+
+      <!-- Detailed Description -->
+      <div class="space-y-4">
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono-code flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            What Happens Here?
+          </h3>
+          <p id="drawer-desc" class="text-sm text-slate-300 mt-1.5 leading-relaxed">
+            The lowest layer of Earth's atmosphere where all terrestrial life exists. Contains nearly all atmospheric water vapor.
+          </p>
+        </div>
+
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono-code flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+            Key Objects & Visible Phenomena
+          </h3>
+          <div id="drawer-objects" class="flex flex-wrap gap-2 mt-2">
+            <!-- Dynamically populated tags -->
+          </div>
+        </div>
+
+        <!-- 8th Grade Science Inquiry Highlight -->
+        <div class="p-4 rounded-xl bg-gradient-to-br from-cyan-950/70 via-slate-900 to-indigo-950/70 border border-cyan-800/50">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">💡</span>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-300 font-mono-code">8th Grade Science Connection</h4>
+          </div>
+          <p id="drawer-fact" class="text-xs sm:text-sm text-cyan-100/95 mt-2 leading-relaxed">
+            Why does temperature decrease as altitude increases? Earth's ground absorbs solar radiation and reradiates it as heat, warming the atmosphere from the bottom up!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Footer in Drawer (Previous / Next) -->
+    <div class="pt-5 mt-6 border-t border-slate-800 flex items-center justify-between">
+      <button onclick="navigateLayer(-1)" class="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Lower Layer
+      </button>
+
+      <span id="nav-step" class="text-[11px] font-mono-code text-slate-500">1 of 9</span>
+
+      <button onclick="navigateLayer(1)" class="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold text-white transition-colors">
+        Higher Layer
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Complete Layer Data & Interaction Logic -->
+  <script>
+    const layerKeys = [
+      'earth',
+      'troposphere',
+      'stratosphere',
+      'ozone',
+      'mesosphere',
+      'karman',
+      'thermosphere',
+      'exobase',
+      'exosphere',
+      'space'
+    ];
+
+    const layerData = {
+      earth: {
+        title: "Earth",
+        tag: "HOME PLANET",
+        tagStyle: "bg-emerald-950 text-emerald-300 border border-emerald-700",
+        altitude: "Surface baseline",
+        tempTrend: "Global Average: ~15°C (59°F)",
+        density: "Average Radius: 6,360 km",
+        description: "Earth, our home planet. The average radius of Earth is 6,360 km.",
+        objects: ["Average Radius: 6,360 km", "Home Planet", "Continents & Oceans", "Surface Baseline"],
+        fact: "Earth, our home planet. The average radius of Earth is 6,360 km. It forms the solid and liquid foundation beneath all layers of our atmosphere."
+      },
+      troposphere: {
+        title: "Troposphere",
+        tag: "LAYER 1",
+        tagStyle: "bg-sky-950 text-sky-300 border border-sky-700",
+        altitude: "0 to 10 km",
+        tempTrend: "Decreases with altitude",
+        density: "Contains approximately 75% of atmosphere's mass",
+        description: "The troposphere extends from Earth to an altitude of 10 km. It contains approximately 75% of the atmosphere's mass and is where most weather occurs. Light aircraft fly here.",
+        objects: ["Light Aircraft", "Most Weather Occurs Here", "75% of Atmospheric Mass", "Clouds & Storms"],
+        fact: "The troposphere extends from Earth to an altitude of 10 km. Because approximately 75% of the atmosphere's mass is compressed into this lowest layer, this is where clouds form, rain falls, and light aircraft navigate."
+      },
+      stratosphere: {
+        title: "Stratosphere",
+        tag: "LAYER 2",
+        tagStyle: "bg-blue-950 text-blue-300 border border-blue-700",
+        altitude: "10 km to 50 km",
+        tempTrend: "Increases with altitude due to ozone absorption",
+        density: "Dry and stable air",
+        description: "The stratosphere extends from an altitude of 10 km to 50 km. Most of Earth's ozone is in this layer. Commercial aircraft fly in the lower stratosphere.",
+        objects: ["Commercial Aircraft", "Most of Earth's Ozone", "Weather Balloons", "Stable Air Currents"],
+        fact: "The stratosphere extends from an altitude of 10 km to 50 km. Most of Earth's ozone is in this layer. Commercial aircraft fly in the lower stratosphere to fly above the stormy troposphere."
+      },
+      ozone: {
+        title: "Ozone Layer",
+        tag: "PROTECTIVE REGION IN STRATOSPHERE",
+        tagStyle: "bg-amber-950 text-amber-300 border border-amber-600",
+        altitude: "~20 to 30 km (within the Stratosphere)",
+        tempTrend: "Absorbs solar energy, warming the surrounding stratosphere",
+        density: "Concentrated ozone molecules (O₃)",
+        description: "Most of Earth's ozone is in this layer within the stratosphere. It absorbs harmful ultraviolet (UV) radiation from the sun, protecting life on Earth's surface.",
+        objects: ["Ozone Molecules (O₃)", "UV Radiation Absorption", "Sun Shield"],
+        fact: "Most of Earth's ozone is located inside the stratosphere between 10 km and 50 km altitude. This protective shield absorbs incoming ultraviolet light from the Sun."
+      },
+      mesosphere: {
+        title: "Mesosphere",
+        tag: "LAYER 3",
+        tagStyle: "bg-indigo-950 text-indigo-300 border border-indigo-700",
+        altitude: "50 km to 85 km",
+        tempTrend: "Coldest atmospheric layer (temperatures plunge with height)",
+        density: "Very thin, yet dense enough to cause meteor ablation",
+        description: "The mesosphere extends from an altitude of 50 km to 85 km. Most meteors burn up in this layer.",
+        objects: ["Meteors ('Shooting Stars')", "Meteors Burn Up Here", "Sounding Rockets"],
+        fact: "The mesosphere extends from an altitude of 50 km to 85 km. Most meteors burn up in this layer due to friction and intense compression with air molecules as they plunge toward Earth."
+      },
+      karman: {
+        title: "The Kármán Line",
+        tag: "BOUNDARY OF SPACE",
+        tagStyle: "bg-red-950 text-red-300 border border-red-600",
+        altitude: "100 km (62 miles)",
+        tempTrend: "Aerodynamic boundary line",
+        density: "Near vacuum (aerodynamic lift ceases to support airplanes)",
+        description: "The globally recognized boundary line at 100 km where Earth's atmosphere becomes too thin for aeronautical flight, marking the official edge of outer space.",
+        objects: ["100 km Boundary", "Edge of Space", "Suborbital Flight Threshold"],
+        fact: "At 100 km altitude, the atmosphere is so thin that conventional airplanes cannot generate aerodynamic lift to fly; vehicles must travel at orbital speeds to remain aloft."
+      },
+      thermosphere: {
+        title: "Thermosphere",
+        tag: "LAYER 4",
+        tagStyle: "bg-purple-950 text-purple-300 border border-purple-700",
+        altitude: "85 km to 1000 km",
+        tempTrend: "Gasses here are hot—but their low density makes the layer cold",
+        density: "Extremely low density (molecules separated by large distances)",
+        description: "The thermosphere extends from 85 km to 1000 km above Earth. Gasses here are hot—but their low density makes the layer cold. The ISS and some satellites orbit here! Satellites orbiting here are considered LEO (low-Earth orbiting).",
+        objects: ["International Space Station (ISS)", "LEO Satellites", "Auroras", "Hot Gas / Low Density"],
+        fact: "The thermosphere extends from 85 km to 1000 km above Earth. Gasses here are hot—but their low density makes the layer cold. The ISS and some satellites orbit here! Satellites orbiting here are considered LEO (low-Earth orbiting)."
+      },
+      exobase: {
+        title: "Exobase",
+        tag: "BASE OF THE EXOSPHERE",
+        tagStyle: "bg-purple-950 text-purple-300 border border-purple-700",
+        altitude: "~1000 km above Earth",
+        tempTrend: "Transition threshold into collisionless escape space",
+        density: "Critical boundary where gas molecules rarely collide",
+        description: "The exobase sits at approximately 1000 km above Earth, representing the top boundary of the thermosphere and the base of the exosphere where air particles rarely collide and begin escaping into space.",
+        objects: ["Base of Exosphere (~1000 km)", "Atmospheric Escape Boundary", "LEO Transition"],
+        fact: "At the exobase (~1000 km), air molecules have traveled so far without bumping into another molecule that individual fast-moving atoms can break free from Earth's gravity entirely."
+      },
+      exosphere: {
+        title: "Exosphere",
+        tag: "LAYER 5",
+        tagStyle: "bg-slate-900 text-slate-300 border border-slate-700",
+        altitude: "1000 km to 150,000 km",
+        tempTrend: "Cold vacuum conditions",
+        density: "Very thin air that slowly escapes to space",
+        description: "The exosphere extends from 1000 km to 150,000 km above Earth. In this outer edge of our atmosphere, the very thin air slowly escapes to space. Many satellites orbit here! Satellites orbiting here which are below 2000 km in altitude are considered LEO (low-Earth orbiting).",
+        objects: ["Many Satellites", "LEO Satellites (below 2000 km)", "Thin Air Escapes to Space", "Outer Edge of Atmosphere"],
+        fact: "The exosphere extends from 1000 km to 150,000 km above Earth. In this outer edge of our atmosphere, the very thin air slowly escapes to space. Many satellites orbit here! Satellites orbiting here which are below 2000 km in altitude are considered LEO (low-Earth orbiting)."
+      },
+      space: {
+        title: "Space",
+        tag: "THE VACUUM BEYOND",
+        tagStyle: "bg-cyan-950 text-cyan-300 border border-cyan-700",
+        altitude: "Beyond Earth's Atmosphere",
+        tempTrend: "Deep cosmic temperature (~2.7 Kelvin / -270°C)",
+        density: "No air molecules here",
+        description: "Space, the vacuum beyond the atmosphere of our planet. There are no air molecules here.",
+        objects: ["Vacuum of Space", "Zero Air Molecules", "Beyond Earth's Atmosphere", "Interplanetary Void"],
+        fact: "Space, the vacuum beyond the atmosphere of our planet. There are no air molecules here."
+      }
+    };
+
+    let activeIndex = 1; // Default to Troposphere
+
+    function openLayer(key) {
+      const index = layerKeys.indexOf(key);
+      if (index !== -1) {
+        activeIndex = index;
+      }
+      const data = layerData[key];
+      if (!data) return;
+
+      // Update Nav Button Active States
+      layerKeys.forEach(k => {
+        const btn = document.getElementById(`btn-${k}`);
+        if (btn) {
+          if (k === key) {
+            btn.classList.add('ring-2', 'ring-cyan-400', 'bg-slate-700');
+          } else {
+            btn.classList.remove('ring-2', 'ring-cyan-400', 'bg-slate-700');
+          }
+        }
+      });
+
+      // Update SVG Active Layer Highlight
+      document.querySelectorAll('.interactive-layer').forEach(el => el.classList.remove('is-active'));
+      const activeSvg = document.getElementById(`layer-svg-${key}`);
+      if (activeSvg) {
+        activeSvg.classList.add('is-active');
+      }
+
+      // Populate text
+      document.getElementById('drawer-title').innerText = data.title;
+      document.getElementById('drawer-altitude').innerText = `Altitude: ${data.altitude}`;
+      document.getElementById('drawer-temp').innerText = data.tempTrend;
+      document.getElementById('drawer-density').innerText = data.density;
+      document.getElementById('drawer-desc').innerText = data.description;
+      document.getElementById('drawer-fact').innerText = data.fact;
+      
+      const tagEl = document.getElementById('drawer-tag');
+      tagEl.innerText = data.tag;
+      tagEl.className = `text-xs font-mono-code px-3 py-1 rounded-full font-bold uppercase tracking-wider ${data.tagStyle}`;
+
+      // Populate object pills
+      const objContainer = document.getElementById('drawer-objects');
+      objContainer.innerHTML = '';
+      data.objects.forEach(item => {
+        const span = document.createElement('span');
+        span.className = 'text-xs bg-slate-800 text-slate-200 px-2.5 py-1 rounded-md border border-slate-700 font-medium';
+        span.innerText = item;
+        objContainer.appendChild(span);
+      });
+
+      // Update Nav step indicator
+      document.getElementById('nav-step').innerText = `${activeIndex + 1} of ${layerKeys.length}`;
+
+      // Reveal Drawer & Backdrop
+      const drawer = document.getElementById('info-drawer');
+      const backdrop = document.getElementById('backdrop');
+
+      backdrop.classList.remove('hidden');
+      setTimeout(() => {
+        backdrop.classList.add('opacity-100');
+        drawer.classList.remove('translate-x-full');
+      }, 10);
+    }
+
+    function closeDrawer() {
+      const drawer = document.getElementById('info-drawer');
+      const backdrop = document.getElementById('backdrop');
+
+      drawer.classList.add('translate-x-full');
+      backdrop.classList.remove('opacity-100');
+      setTimeout(() => {
+        backdrop.classList.add('hidden');
+      }, 300);
+    }
+
+    function navigateLayer(direction) {
+      activeIndex += direction;
+      if (activeIndex < 0) activeIndex = layerKeys.length - 1;
+      if (activeIndex >= layerKeys.length) activeIndex = 0;
+      openLayer(layerKeys[activeIndex]);
+    }
+
+    function toggleInfoModal() {
+      openLayer(layerKeys[activeIndex]);
+    }
+
+    // Keyboard navigation (Escape to close, Left/Right arrow keys to step through layers)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+      if (e.key === 'ArrowRight') navigateLayer(1);
+      if (e.key === 'ArrowLeft') navigateLayer(-1);
+    });
+  </script>
+</body>
+</html>
